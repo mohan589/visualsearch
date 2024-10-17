@@ -1,3 +1,14 @@
 streamlit
 streamlit_cropper
 numpy
+datasets
+accelerate
+loadimg
+faiss-cpu
+torch
+transformers
+loadimg
+matplotlib
+torchvision
+sentence_transformers
+pinecone
