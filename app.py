@@ -44,15 +44,16 @@ with st.sidebar:
     st.write(f"Searching for {text_input}!")
     text_embedding = clip.tokenize(text_input).to(device)
     text_features = model.encode_text(text_embedding).detach().cpu().numpy()
-    searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=2, include_values=True, include_metadata=True)
+    searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=10, include_values=True, include_metadata=True)
+    searchResults = searchResults['matches']
 
 with st.container():
   st.write("This is inside the container")
   
-  row1 = st.columns(3)
-  print(searchResults, 'searchResults')
+  row = st.columns(3)
   if searchResults:
-    for img in searchResults['matches']:
-      image = Image.open(img['metadata']['path'])
-      new_image = image.resize((300, 200))
-      st.image(new_image, caption="Sunrise by the mountains")
+    for index, img in enumerate(searchResults):
+      with row[index % 3]:
+        image = Image.open(img['metadata']['path'])
+        new_image = image.resize((300, 200))
+        st.image(new_image, caption=img['metadata']['name'])
