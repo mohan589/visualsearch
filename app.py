@@ -44,7 +44,7 @@ with st.sidebar:
     st.write(f"Searching for {text_input}!")
     text_embedding = clip.tokenize(text_input).to(device)
     text_features = model.encode_text(text_embedding).detach().cpu().numpy()
-    searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=10, include_values=True, include_metadata=True)
+    searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=100, include_values=True, include_metadata=True)
     searchResults = searchResults['matches']
 
 with st.container():
