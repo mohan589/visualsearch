@@ -5,6 +5,7 @@ import os
 import ssl
 from pinecone import Pinecone
 import numpy as np
+import torch
 import streamlit as st
 from PIL import Image
 from streamlit_cropper import st_cropper
@@ -32,24 +33,26 @@ with st.sidebar:
 			st.write("Preview")
 			_ = cropped_pic.thumbnail((100,100))
 			st.image(cropped_pic, output_format="PNG")
-  # title = st.text_input("Movie title", "Life of Brian")
 
+global text_input, searchResults
+text_input = ""
+searchResults = []
+
+with st.sidebar:
+  text_input = st.text_input("Search Text", "")
+  if st.button("Search..."):
+    st.write(f"Searching for {text_input}!")
+    text_embedding = clip.tokenize(text_input).to(device)
+    text_features = model.encode_text(text_embedding).detach().cpu().numpy()
+    searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=2, include_values=True, include_metadata=True)
 
 with st.container():
   st.write("This is inside the container")
   
   row1 = st.columns(3)
-  row2 = st.columns(3)
-  
-  for col in row1 + row2:
-    tile = col.container(height=250)
-    tile.title(":balloon:")
-
-while True:
-  text_input = input("Enter text: ")
-  text_embedding = clip.tokenize(text_input).to(device)
-  text_features = model.encode_text(text_embedding).detach().cpu().numpy()
-  result = index.query(vector=np.squeeze(text_features).tolist(), top_k=2, include_values=True, include_metadata=True)
-  for i in result['matches']:
-    img = Image.open(i['metadata']['path'])
-    img.show()
+  print(searchResults, 'searchResults')
+  if searchResults:
+    for img in searchResults['matches']:
+      image = Image.open(img['metadata']['path'])
+      new_image = image.resize((300, 200))
+      st.image(new_image, caption="Sunrise by the mountains")
