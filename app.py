@@ -9,9 +9,8 @@ import torch
 import streamlit as st
 import pandas as pd
 from PIL import Image
-from streamlit_cropper import st_cropper
 from streamlit_drawable_canvas import st_canvas
-
+import cv2
 ssl._create_default_https_context = ssl._create_stdlib_context
 
 st.title('VisualSearchEngine')
@@ -42,21 +41,21 @@ with st.sidebar:
       update_streamlit=True,
       width=400,
       height=550,
-      drawing_mode="rect",
+      drawing_mode="circle",
       key="canvas",
       display_toolbar=False
     )
 
     if canvas_result.image_data is not None:
       objects = pd.json_normalize(canvas_result.json_data["objects"]) # need to convert obj to str because PyArrow
-      for col in objects.select_dtypes(include=['object']).columns:
-        objects[col] = objects[col].astype("str")
-      st.dataframe(objects)
-      # (left, upper, right, lower)
       if len(objects) > 0:
-        # image = image.convert('L')
-        print(objects['left'][0], objects['top'][0], objects['width'][0], objects['height'][0])
-        resizedImage = image.crop((objects['left'][0], objects['top'][0], objects['width'][0], objects['height'][0]))
+        right = int(objects.tail(1)['left'].iloc[0]) + int(objects.tail(1)['width'].iloc[0]) + 100
+        bottom = int(objects.tail(1)['top'].iloc[0]) + int(objects.tail(1)['height'].iloc[0])
+        coordinateTuples = (int(objects.tail(1)['left'].iloc[0]), int(objects.tail(1)['top'].iloc[0]), right, bottom)
+        croppedImage = image.crop(coordinateTuples)
+        resizedImage = croppedImage
+        st.image(croppedImage, caption="Cropped Image", use_column_width=True, width=300)
+      st.dataframe(objects)
 
 with st.sidebar:
   text_input = st.text_input("Search Text", "")
@@ -66,16 +65,15 @@ with st.sidebar:
     text_features = model.encode_text(text_embedding).detach().cpu().numpy()
     searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=100, include_values=True, include_metadata=True)
   if resizedImage:
-    st.image(resizedImage)
-    image = preprocess(resizedImage).unsqueeze(0).to(device)
+    updatedImage = preprocess(resizedImage).unsqueeze(0).to(device)
     with torch.no_grad():
-      text_features = model.encode_image(image).cpu().numpy().tolist()
+      text_features = model.encode_image(updatedImage).cpu().numpy().tolist()
     searchResults = index.query(vector=np.squeeze(text_features).tolist(), top_k=100, include_values=True, include_metadata=True)
   searchResults = searchResults['matches'] if searchResults and len(searchResults['matches']) > 0 else []
 
 with st.container():
   st.write("This is inside the container")
-  
+
   row = st.columns(3)
   if searchResults:
     for index, img in enumerate(searchResults):
